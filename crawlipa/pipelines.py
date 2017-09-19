@@ -12,10 +12,9 @@ class CrawlIPAPipeline:
     def open_spider(self, spider):
         self._redis = Redis(current_config.redis)
 
-    def close_spider(self, spider):
-        self.client.close()
-
     def process_item(self, item, spider):
-        self._redis.set_data(get_redis_key(item['word']), item['american_phonetic_alphabet'])
+        alphabet = item['american_phonetic_alphabet']
+        if alphabet:
+            self._redis.set_data(get_redis_key(item['word']), item['american_phonetic_alphabet'])
         return item
 

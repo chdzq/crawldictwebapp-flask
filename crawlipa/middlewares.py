@@ -17,17 +17,6 @@ logger = logging.getLogger(__name__)
 class RotateUserAgentMiddleware(UserAgentMiddleware):
     """避免被ban策略之一：使用useragent池。
     """
-    def __init__(self, user_agent=''):
-        super(RotateUserAgentMiddleware, self).__init__()
-        self.user_agent = user_agent
-
-    def process_request(self, request, spider):
-        ua = random.choice(self.user_agent_list)
-        if ua:
-            # 记录当前使用的useragent
-            logger.info('Current UserAgent: ' + ua)
-            request.headers.setdefault('User-Agent', ua)
-
     # the default user_agent_list composes chrome,I E,firefox,Mozilla,opera,netscape
     # for more visit http://www.useragentstring.com/pages/useragentstring.php
     user_agent_list = [
@@ -70,6 +59,15 @@ class RotateUserAgentMiddleware(UserAgentMiddleware):
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_3) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36"
     ]
+
+
+    def process_request(self, request, spider):
+        user_agent = random.choice(self.user_agent_list)
+        if user_agent:
+            # 记录当前使用的useragent
+            print('Current UserAgent: ' + user_agent)
+            request.headers.setdefault('User-Agent', user_agent)
+
 
 class Crawldict2ArpabetSpiderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,
