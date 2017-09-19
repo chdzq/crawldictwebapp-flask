@@ -51,10 +51,6 @@ SPIDER_MIDDLEWARES = {
    'crawlipa.middlewares.RotateUserAgentMiddleware': 543,
 }
 
-MONGODB_SERVER = "localhost"
-MONGODB_PORT = 27017
-MONGODB_DB = "dict"
-
 # Enable or disable downloader middlewares
 # See http://scrapy.readthedocs.org/en/latest/topics/downloader-middleware.html
 #DOWNLOADER_MIDDLEWARES = {
