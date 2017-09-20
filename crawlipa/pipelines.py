@@ -4,7 +4,7 @@
 #
 # Don't forget to add your pipeline to the ITEM_PIPELINES setting
 # See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html
-from core.redis import Redis, get_redis_key
+from core.redis import Redis, get_crawl_redis_key
 from config import current_config
 
 class CrawlIPAPipeline:
@@ -15,6 +15,6 @@ class CrawlIPAPipeline:
     def process_item(self, item, spider):
         alphabet = item['american_phonetic_alphabet']
         if alphabet:
-            self._redis.set_data(get_redis_key(item['word']), item['american_phonetic_alphabet'])
+            self._redis.set_data(get_crawl_redis_key(item['word']), item['american_phonetic_alphabet'])
         return item
 

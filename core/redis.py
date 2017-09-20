@@ -29,5 +29,11 @@ class Redis:
             return None
         return pickle.loads(data)
 
-def get_redis_key(word):
+    def delete(self, key):
+        return self._redis.delete(key)
+
+def get_crawl_redis_key(word):
     return 'crawl_' + word
+
+def get_rapabet_redis_key(word):
+    return 'arpabet_' + word

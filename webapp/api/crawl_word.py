@@ -2,15 +2,17 @@
 
 import subprocess
 from webapp import app, mongo, redis
-from flask import jsonify, make_response
+from flask import jsonify, make_response, request, json
 from arpabetandipaconvertor.ipa2arpabet import IPA2ARPAbetConvertor
-from core.redis import get_redis_key
+from core.redis import get_crawl_redis_key, get_rapabet_redis_key
 from webapp.exception.generate_worker import generate_custom_error
-from webapp.exception.webapp_error import ARPAbetError
+from webapp.exception.webapp_error import ARPAbetError, SystemError
 
+from logging import getLogger
+logger = getLogger(__name__)
 
-@app.route('/arpabet/crawl/<string:word>')
-def crawl_world(word):
+@app.route('/arpabet/crawl', methods=['POST'])
+def crawl_world():
     """
      1.爬虫爬到字
      2.存在redis中
@@ -19,24 +21,56 @@ def crawl_world(word):
      5.最后存在mongodb
      6.返回数据
     """
+    body = request.get_json()
+    if not body:
+        raise generate_custom_error(SystemError.request_param, "body是空")
 
+    body_words = body.get('words', None)
+    if not body_words:
+        raise generate_custom_error(SystemError.request_param, "参数异常")
+    logger.info(msg="body %s" % body_words)
     alphabet = None
-    spider_names = ["youdao", "iciba", "youdao"]
-    key = get_redis_key(word=word)
-    for spider_name in spider_names:
-        subprocess.check_output(['scrapy', 'crawl', spider_name, "-a", "word=" + word])
+    spider_names = ["iciba", "iciba", "youdao"]
+    spider_param = json.dumps(body_words)
+    alphabets = []
+    words_dict = {}
+    for word in body_words:
+        key = get_rapabet_redis_key(word=word)
         alphabet = redis.get_data(key)
         if alphabet:
+            alphabets.append({word: alphabet})
+            continue
+        find_alphabet = mongo.find_one('dict', {'word': word})
+        if find_alphabet:
+            alphabets.append({word: find_alphabet["arpabet"]})
+            continue
+        words_dict[word] = None
+
+    for spider_name in spider_names:
+        if not words_dict:
             break
-
-    if alphabet:
-        arpabet = None
         try:
-            convert = IPA2ARPAbetConvertor()
-            arpabet = convert.convert(alphabet)
+            subprocess.check_output(['scrapy', 'crawl', spider_name, "-a", "words=" + spider_param])
         except Exception as e:
-            raise generate_custom_error(ARPAbetError.ipa_unable_convert_arpabet, "ipa转换arpabet出错")
-        mongo.update('dict', {'word': word}, {'word': word, 'arpabet': arpabet})
-        return jsonify({"result": 0, "data": {"word": word, "arpabet": arpabet}})
+            logger.error(msg="错误信息 %s" % str(e))
+        temp = words_dict.copy()
+        for key_word in temp:
+            key = get_crawl_redis_key(word=key_word)
+            alphabet = redis.get_data(key)
+            if alphabet:
+                arpabet = None
+                try:
+                    convert = IPA2ARPAbetConvertor()
+                    arpabet = convert.convert(alphabet)
+                except Exception as e:
+                    raise generate_custom_error(ARPAbetError.ipa_unable_convert_arpabet, "ipa转换arpabet出错")
+                mongo.update('dict', {'word': key_word}, {'word': key_word, 'arpabet': arpabet})
+                redis.set_data(key=get_rapabet_redis_key(key_word), data=arpabet)
+                redis.delete(key=key)
+                alphabets.append({key_word: alphabet})
+                words_dict.pop(k=key_word)
 
-    raise generate_custom_error(ARPAbetError.unable_crawl_ipa, "查不到" + word + "的ipa")
+    if not words_dict:
+        return jsonify({"result": 0, "data": jsonify(alphabets)})
+
+    raise generate_custom_error(ARPAbetError.unable_crawl_ipa, "只查到了 %s" % jsonify(alphabets))
