@@ -1,41 +1,10 @@
-#!/usr/bin/env python
 # encoding: utf-8
 
-import subprocess
-
-from webapp import app, mongo, redis
-from flask import jsonify
-from arpabetandipaconvertor.ipa2arpabet import IPA2ARPAbetConvertor
-from core.redis import get_redis_key
-
-@app.route('/arpabet/crawl/<string:word>')
-def crawl_world(word):
-    """
-     1.爬虫爬到字
-     2.存在redis中
-     3.从redis中取
-     4.没取到继续下一个爬
-     5.最后存在mongodb
-     6.返回数据
-    """
-
-    alphabet = None
-    spider_names = ["iciba", "youdao"]
-    key = get_redis_key(word=word)
-    for spider_name in spider_names:
-        subprocess.check_output(['scrapy', 'crawl', spider_name, "-a", "word=" + word])
-        alphabet = redis.get_data(key)
-        if alphabet:
-            break
-
-    if alphabet:
-        print(alphabet)
-        convert = IPA2ARPAbetConvertor()
-        arpabet = convert.convert(alphabet)
-        mongo.update('dict', {'word': word}, {'word': word, 'arpabet': arpabet})
-        return jsonify({"result": 0, "data": {"word": word, "arpabet": arpabet}})
-
-    return jsonify({"result": 1000, "data": "查不到"})
+from webapp import api
+from webapp.exception import handle
 
 if __name__ == '__main__':
+    from webapp import mongo
+    mongo.output_rows("dict")
+    from webapp import app
     app.run(debug=True)

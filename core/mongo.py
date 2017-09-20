@@ -1,14 +1,11 @@
-#!/usr/bin/env python
 # encoding: utf-8
 
 from pymongo import MongoClient
-from pymongo import errors
 import json
 from datetime import date, datetime
-import logging
+from logging import getLogger
 
-logger = logging.getLogger(__name__)
-
+logger = getLogger(__name__)
 
 class Mongodb(object):
     """
@@ -18,15 +15,10 @@ class Mongodb(object):
         self.db_config = db_config
         if db_name is not None:
             self.db_config['database'] = db_name
-        try:
-            # 实例化mongodb
-            self.conn = MongoClient(self.db_config['host'], self.db_config['port'])
-            # 获取数据库对象(选择/切换)
-            self.db = self.conn.get_database(self.db_config['database'])
-        except errors.ServerSelectionTimeoutError as e:
-            logger.error('连接超时：%s' % e)
-        except Exception as e:
-            logger.error(e)
+        # 实例化mongodb
+        self.conn = MongoClient(self.db_config['host'], self.db_config['port'])
+        # 获取数据库对象(选择/切换)
+        self.db = self.conn.get_database(self.db_config['database'])
 
     @staticmethod
     def __default(obj):
@@ -94,12 +86,8 @@ class Mongodb(object):
         :param data:
         :return:
         """
-        try:
-            ids = self.db.get_collection(table_name).insert(data)
-            return ids
-        except Exception as e:
-            logger.error('插入失败：%s' % e)
-            return None
+        ids = self.db.get_collection(table_name).insert(data)
+        return ids
 
     def update(self, table_name, condition, update_data, update_type='set'):
         """
@@ -112,15 +100,11 @@ class Mongodb(object):
         :return:
         """
         if update_type not in ['inc', 'set', 'unset', 'push', 'pushAll', 'addToSet', 'pop', 'pull', 'pullAll', 'rename']:
-            logger.error('更新失败，类型错误：%s' % update_type)
-            return None
-        try:
-            result = self.db.get_collection(table_name).update_many(condition, {'$%s' % update_type: update_data})
-            logger.info('更新成功，匹配数量：%s；更新数量：%s' % (result.matched_count, result.modified_count))
-            return result.modified_count  # 返回更新数量，仅支持MongoDB 2.6及以上版本
-        except Exception as e:
-            logger.error('更新失败：%s' % e)
-            return None
+            logger.error(msg='更新失败，类型错误：%s' % update_type)
+            raise TypeError('%s 更新失败，类型错误：%s' % (table_name, update_type))
+        result = self.db.get_collection(table_name).update_many(condition, {'$%s' % update_type: update_data})
+        logger.info(msg='更新成功，匹配数量：%s；更新数量：%s' % (result.matched_count, result.modified_count))
+        return result.modified_count  # 返回更新数量，仅支持MongoDB 2.6及以上版本
 
     def remove(self, table_name, condition=None):
         """
@@ -131,10 +115,10 @@ class Mongodb(object):
         """
         result = self.db.get_collection(table_name).remove(condition)
         if result.get('err') is None:
-            logger.info('删除成功，删除行数%s' % result.get('n', 0))
+            logger.info(msg='删除成功，删除行数%s' % result.get('n', 0))
             return result.get('n', 0)
         else:
-            logger.error('删除失败：%s' % result.get('err'))
+            logger.error(msg='删除失败：%s' % result.get('err'))
             return None
 
     def output_row(self, table_name, condition=None, style=0):
