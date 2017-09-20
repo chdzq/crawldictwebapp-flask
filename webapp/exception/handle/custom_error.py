@@ -1,16 +1,14 @@
 # encoding: utf-8
 
-from logging import getLogger
 
 from flask import make_response, jsonify
-
 from webapp import app
 from webapp.exception.error import CustomError
 from webapp.exception.generate_worker import get_custom_error_code
 from webapp.exception.webapp_error import OtherError
 
+from logging import getLogger
 logger = getLogger(__name__)
-
 
 @app.errorhandler(CustomError)
 def handle_custom_exception(error):
@@ -34,3 +32,4 @@ def handle_exception(error):
     response.status_code = 500
 
     return response
+

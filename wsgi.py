@@ -1,7 +1,6 @@
 # encoding: utf-8
 
-from webapp import server
-from webapp import app
+from webapp.server import app
 
 if __name__ == "__main__":
     from webapp import mongo

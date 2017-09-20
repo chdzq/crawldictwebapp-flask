@@ -12,4 +12,5 @@ mongo = Mongodb(current_config.mongodb)
 from core.redis import Redis
 redis = Redis(current_config.redis)
 
-# from webapp import server
+from webapp.api.crawl_word import crawl_blueprint
+app.register_blueprint(crawl_blueprint, url_prefix='/arpabet')

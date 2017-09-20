@@ -1,8 +1,8 @@
 # encoding: utf-8
 
 import subprocess
-from webapp import app, mongo, redis
-from flask import jsonify, make_response, request, json
+from webapp import mongo, redis
+from flask import jsonify, request, json
 from arpabetandipaconvertor.ipa2arpabet import IPA2ARPAbetConvertor
 from core.redis import get_crawl_redis_key, get_rapabet_redis_key
 from webapp.exception.generate_worker import generate_custom_error
@@ -11,7 +11,11 @@ from webapp.exception.webapp_error import ARPAbetError, SystemError
 from logging import getLogger
 logger = getLogger(__name__)
 
-@app.route('/arpabet/crawl', methods=['POST'])
+from flask.blueprints import Blueprint
+
+crawl_blueprint = Blueprint('crawl', __name__)
+
+@crawl_blueprint.route('/crawl', methods=['POST'])
 def crawl_world():
     """
      1.爬虫爬到字
@@ -71,6 +75,6 @@ def crawl_world():
                 words_dict.pop(k=key_word)
 
     if not words_dict:
-        return jsonify({"result": 0, "data": jsonify(alphabets)})
+        return alphabets
 
     raise generate_custom_error(ARPAbetError.unable_crawl_ipa, "只查到了 %s" % jsonify(alphabets))
