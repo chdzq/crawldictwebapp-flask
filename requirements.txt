@@ -28,6 +28,7 @@ Scrapy==1.4.0
 service-identity==17.0.0
 six==1.11.0
 Twisted==17.5.0
+uWSGI==2.0.15
 w3lib==1.18.0
 Werkzeug==0.12.2
 zope.interface==4.4.2
