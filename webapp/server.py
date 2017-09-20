@@ -3,13 +3,12 @@
 
 import subprocess
 
-import uuid
 from webapp import app, mongo, redis
 from flask import jsonify
 from arpabetandipaconvertor.ipa2arpabet import IPA2ARPAbetConvertor
 from core.redis import get_redis_key
 
-@app.route('/crawl/<string:word>')
+@app.route('/arpabet/crawl/<string:word>')
 def crawl_world(word):
     """
      1.爬虫爬到字
@@ -21,7 +20,7 @@ def crawl_world(word):
     """
 
     alphabet = None
-    spider_names = ["youdao", "iciba"]
+    spider_names = ["iciba", "youdao"]
     key = get_redis_key(word=word)
     for spider_name in spider_names:
         subprocess.check_output(['scrapy', 'crawl', spider_name, "-a", "word=" + word])
@@ -30,9 +29,10 @@ def crawl_world(word):
             break
 
     if alphabet:
+        print(alphabet)
         convert = IPA2ARPAbetConvertor()
         arpabet = convert.convert(alphabet)
-        mongo.update('dict', {'word': word}, alphabet)
+        mongo.update('dict', {'word': word}, {'word': word, 'arpabet': arpabet})
         return jsonify({"result": 0, "data": {"word": word, "arpabet": arpabet}})
 
     return jsonify({"result": 1000, "data": "查不到"})
