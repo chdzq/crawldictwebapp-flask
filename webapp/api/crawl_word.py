@@ -32,7 +32,7 @@ def crawl_world():
     body_words = body.get('words', None)
     if not body_words:
         raise generate_custom_error(SystemError.request_param, "参数异常")
-    logger.info(msg="body %s" % body_words)
+
     alphabet = None
     spider_names = ["iciba", "iciba", "youdao"]
     spider_param = json.dumps(body_words)
@@ -46,9 +46,16 @@ def crawl_world():
             continue
         find_alphabet = mongo.find_one('dict', {'word': word})
         if find_alphabet:
-            alphabets.append({word: find_alphabet["arpabet"]})
-            continue
-        words_dict[word] = None
+            temp_alphabet = None
+            try:
+                temp_alphabet = find_alphabet["arpabet"]
+            except BaseException as e:
+                logger.error(msg=str(e))
+
+            if temp_alphabet:
+                alphabets.append({word: temp_alphabet})
+                continue
+        words_dict[word] = True
 
     for spider_name in spider_names:
         if not words_dict:
@@ -72,9 +79,9 @@ def crawl_world():
                 redis.set_data(key=get_rapabet_redis_key(key_word), data=arpabet)
                 redis.delete(key=key)
                 alphabets.append({key_word: alphabet})
-                words_dict.pop(k=key_word)
+                del words_dict[key_word]
 
     if not words_dict:
-        return alphabets
+        return jsonify(alphabets)
 
     raise generate_custom_error(ARPAbetError.unable_crawl_ipa, "只查到了 %s" % jsonify(alphabets))
