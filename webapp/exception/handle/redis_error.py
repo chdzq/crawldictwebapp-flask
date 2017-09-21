@@ -14,7 +14,7 @@ def handle_redis_exception(error):
     logger.error(msg=message)
     response = make_response(jsonify({
         "result": get_custom_error_code(error=SystemError.redis),
-        "message": message, "data": ""
+        "message": message
     }))
     response.status_code = 500
 

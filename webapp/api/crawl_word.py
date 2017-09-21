@@ -1,13 +1,13 @@
 # encoding: utf-8
 
 import subprocess
-from webapp import mongo, redis
+from webapp import mongo_service, redis_service
 from flask import jsonify, request, json
 from arpabetandipaconvertor.ipa2arpabet import IPA2ARPAbetConvertor
 from core.redis import get_crawl_redis_key, get_rapabet_redis_key
 from webapp.exception.generate_worker import generate_custom_error
 from webapp.exception.webapp_error import ARPAbetError, SystemError
-
+from core.model.word_model import WordModel
 from logging import getLogger
 logger = getLogger(__name__)
 
@@ -33,55 +33,67 @@ def crawl_world():
     if not body_words:
         raise generate_custom_error(SystemError.request_param, "参数异常")
 
-    alphabet = None
-    spider_names = ["iciba", "iciba", "youdao"]
+    spider_names = ["haici", "iciba", "haiciname"]
     spider_param = json.dumps(body_words)
-    alphabets = []
-    words_dict = {}
-    for word in body_words:
-        key = get_rapabet_redis_key(word=word)
-        alphabet = redis.get_data(key)
-        if alphabet:
-            alphabets.append({word: alphabet})
-            continue
-        find_alphabet = mongo.find_one('dict', {'word': word})
-        if find_alphabet:
-            temp_alphabet = None
-            try:
-                temp_alphabet = find_alphabet["arpabet"]
-            except BaseException as e:
-                logger.error(msg=str(e))
 
-            if temp_alphabet:
-                alphabets.append({word: temp_alphabet})
-                continue
-        words_dict[word] = True
+    will_crawl_words_dict, alphabets_dict = _work_before_crawl(words=body_words)
 
     for spider_name in spider_names:
-        if not words_dict:
+        if not will_crawl_words_dict:
             break
         try:
             subprocess.check_output(['scrapy', 'crawl', spider_name, "-a", "words=" + spider_param])
         except Exception as e:
             logger.error(msg="错误信息 %s" % str(e))
-        temp = words_dict.copy()
-        for key_word in temp:
-            key = get_crawl_redis_key(word=key_word)
-            alphabet = redis.get_data(key)
-            if alphabet:
-                arpabet = None
-                try:
-                    convert = IPA2ARPAbetConvertor()
-                    arpabet = convert.convert(alphabet)
-                except Exception as e:
-                    raise generate_custom_error(ARPAbetError.ipa_unable_convert_arpabet, "ipa转换arpabet出错")
-                mongo.update('dict', {'word': key_word}, {'word': key_word, 'arpabet': arpabet})
-                redis.set_data(key=get_rapabet_redis_key(key_word), data=arpabet)
-                redis.delete(key=key)
-                alphabets.append({key_word: alphabet})
-                del words_dict[key_word]
 
-    if not words_dict:
-        return jsonify(alphabets)
+        _work_after_crawl(will_crawl_words_dict=will_crawl_words_dict, alphabets_dict=alphabets_dict)
 
-    raise generate_custom_error(ARPAbetError.unable_crawl_ipa, "只查到了 %s" % jsonify(alphabets))
+    if not will_crawl_words_dict:
+        return jsonify(alphabets_dict)
+
+    raise generate_custom_error(ARPAbetError.unable_crawl_ipa, "只查到了 %s" % json.dumps(alphabets_dict))
+
+
+def _work_before_crawl(words):
+
+    alphabets_dict = {}
+    will_crawl_words_dict = {}
+    for word in words:
+        alphabet = redis_service.get_convert_arpabet(word=word)
+        if alphabet:
+            alphabets_dict[word] = alphabet
+            continue
+        find_alphabet = mongo_service.find_one(word)
+        if find_alphabet:
+            temp_alphabet = find_alphabet.get_default_arpabet()
+            if temp_alphabet:
+                alphabets_dict[word] = temp_alphabet
+                continue
+        will_crawl_words_dict[word] = True
+
+    return will_crawl_words_dict, alphabets_dict
+
+
+def _work_after_crawl(will_crawl_words_dict, alphabets_dict):
+
+    temp_will_crawl_words_dict = will_crawl_words_dict.copy()
+    for word in temp_will_crawl_words_dict:
+        alphabet = redis_service.get_crawl_alphabet(word=word)
+        if alphabet:
+            word_model = WordModel(word=word)
+            try:
+                convert = IPA2ARPAbetConvertor()
+                arpabet = convert.convert(alphabet)
+                arpabets = WordModel.Arpabets(default=arpabet)
+                word_model.arpabets = arpabets
+            except BaseException as e:
+                logger.error(msg="ipa转换arpabet出错: %s" % str(e))
+                continue
+
+            mongo_service.update(model=word_model)
+            redis_service.delete_crawl_alphabet(word=word)
+            redis_service.save_convert_arpabet(model=word_model)
+            alphabets_dict[word] = word_model.get_default_arpabet()
+            del will_crawl_words_dict[word]
+
+

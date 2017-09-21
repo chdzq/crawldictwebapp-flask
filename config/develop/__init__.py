@@ -1,10 +1,11 @@
+# encoding: utf-8
 
 mongodb = {
     'host': 'localhost',
     'port': 27017,
     'username': '',
     'password': '',
-    'database': 'dict'
+    'database': 'test_db'
 }
 
 redis = {

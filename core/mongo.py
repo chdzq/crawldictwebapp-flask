@@ -4,21 +4,30 @@ from pymongo import MongoClient
 import json
 from datetime import date, datetime
 from logging import getLogger
+from enum import Enum, unique
 
 logger = getLogger(__name__)
 
 class Mongodb(object):
+
     """
     自定义mongodb工具
     """
     def __init__(self, db_config, db_name=None):
-        self.db_config = db_config
-        if db_name is not None:
-            self.db_config['database'] = db_name
+        self._db_config = db_config
+        if db_name:
+            self._db_config['database'] = db_name
         # 实例化mongodb
-        self.conn = MongoClient(self.db_config['host'], self.db_config['port'])
+        # "mongodb: // % s: % s @ 127.0.0.1 ' % (username, password)"
+        uri = "mongodb://"
+        username = db_config.get('username', None)
+        if username:
+            password = db_config.get('password', None)
+            uri += '%s:%s@' % (username, password)
+        uri += self._db_config.get('host', None)
+        self._conn = MongoClient(host=uri, port=self._db_config.get('port', None))
         # 获取数据库对象(选择/切换)
-        self.db = self.conn.get_database(self.db_config['database'])
+        self._db = self._conn.get_database(name=self._db_config.get('database'))
 
     @staticmethod
     def __default(obj):
@@ -41,7 +50,11 @@ class Mongodb(object):
         关闭所有套接字的连接池和停止监控线程。
         如果这个实例再次使用它将自动重启和重新启动线程
         """
-        self.conn.close()
+        self._conn.close()
+
+    def delete(self, table_name, condition=None):
+        result = self._db.get_collection(name=table_name).delete_many(filter=condition)
+        return result.deleted_count
 
     def find_one(self, table_name, condition=None):
         """
@@ -50,7 +63,7 @@ class Mongodb(object):
         :param condition:
         :return:
         """
-        return self.db.get_collection(table_name).find_one(condition)
+        return self._db.get_collection(name=table_name).find_one(filter=condition)
 
     def find_all(self, table_name, condition=None):
         """
@@ -59,7 +72,7 @@ class Mongodb(object):
         :param condition:
         :return:
         """
-        return self.db.get_collection(table_name).find(condition)
+        return self._db.get_collection(name=table_name).find(condition)
 
     def count(self, table_name, condition=None):
         """
@@ -68,7 +81,7 @@ class Mongodb(object):
         :param condition:
         :return:
         """
-        return self.db.get_collection(table_name).count(condition)
+        return self._db.get_collection(name=table_name).count(filter=condition)
 
     def distinct(self, table_name, field_name):
         """
@@ -77,7 +90,7 @@ class Mongodb(object):
         :param field_name:
         :return:
         """
-        return self.db.get_collection(table_name).distinct(field_name)
+        return self._db.get_collection(name=table_name).distinct(key=field_name)
 
     def insert(self, table_name, data):
         """
@@ -86,23 +99,57 @@ class Mongodb(object):
         :param data:
         :return:
         """
-        ids = self.db.get_collection(table_name).insert(data)
+        ids = self._db.get_collection(name=table_name).insert(doc_or_docs=data)
         return ids
 
-    def update(self, table_name, condition, update_data, update_type='set'):
-        """
-        批量更新数据
-        upsert : 如果不存在update的记录，是否插入；true为插入，默认是false，不插入。
+    @unique
+    class UpdateType(Enum):
+        set = 0
+        inc = 1
+        unset = 2
+        push = 3
+        pushAll = 4
+        addToSet = 5
+        pop = 6
+        pull = 7
+        pullAll = 8
+        rename = 9
+
+    def update_one(self, table_name, condition, update_data, update_type=UpdateType.set, upsert=False):
+
+        '''
+         更新一个合适的新数据
         :param table_name:
         :param condition:
         :param update_data:
         :param update_type: 范围：['inc', 'set', 'unset', 'push', 'pushAll', 'addToSet', 'pop', 'pull', 'pullAll', 'rename']
+        :param upsert: 如果不存在update的记录，是否插入；true为插入，默认是false，不插入。
         :return:
-        """
-        if update_type not in ['inc', 'set', 'unset', 'push', 'pushAll', 'addToSet', 'pop', 'pull', 'pullAll', 'rename']:
-            logger.error(msg='更新失败，类型错误：%s' % update_type)
-            raise TypeError('%s 更新失败，类型错误：%s' % (table_name, update_type))
-        result = self.db.get_collection(table_name).update_many(condition, {'$%s' % update_type: update_data})
+        '''
+
+        result = self._db.get_collection(name=table_name).update_one(
+            filter=condition,
+            update={'$%s' % update_type.name: update_data},
+            upsert=upsert)
+        logger.info(msg='更新成功，匹配数量：%s；更新数量：%s' % (result.matched_count, result.modified_count))
+        return result.modified_count  # 返回更新数量，仅支持MongoDB 2.6及以上版本
+
+    def update(self, table_name, condition, update_data, update_type=UpdateType.set, upsert=False):
+
+        '''
+         更新全部合适的数据
+        :param table_name:
+        :param condition:
+        :param update_data:
+        :param update_type: 范围：['inc', 'set', 'unset', 'push', 'pushAll', 'addToSet', 'pop', 'pull', 'pullAll', 'rename']
+        :param upsert: 如果不存在update的记录，是否插入；true为插入，默认是false，不插入。
+        :return:
+        '''
+
+        result = self._db.get_collection(name=table_name).update_many(
+            filter=condition,
+            update={'$%s' % update_type.name: update_data},
+            upsert=upsert)
         logger.info(msg='更新成功，匹配数量：%s；更新数量：%s' % (result.matched_count, result.modified_count))
         return result.modified_count  # 返回更新数量，仅支持MongoDB 2.6及以上版本
 
@@ -113,7 +160,7 @@ class Mongodb(object):
         :param condition:
         :return:
         """
-        result = self.db.get_collection(table_name).remove(condition)
+        result = self._db.get_collection(name=table_name).remove(spec_or_id=condition)
         if result.get('err') is None:
             logger.info(msg='删除成功，删除行数%s' % result.get('n', 0))
             return result.get('n', 0)

@@ -16,7 +16,8 @@ def handle_custom_exception(error):
     error_code = error.get_error_code()
     error_message = error.get_message()
 
-    response = make_response(jsonify({"result": error_code, "message": error_message, "data": ""}))
+    response = make_response(jsonify({"result": error_code,
+                                      "message": error_message}))
     response.status_code = 200
 
     return response
@@ -27,7 +28,7 @@ def handle_exception(error):
 
     response = make_response(jsonify({
         "result": get_custom_error_code(error=OtherError.unknow),
-        "message": str(error), "data": ""
+        "message": str(error)
     }))
     response.status_code = 500
 
