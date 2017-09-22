@@ -14,6 +14,8 @@ def get_custom_error_code(error):
         delta = 8000
     return delta + error.value
 
-def generate_custom_error(error, message):
+def generate_custom_error(error, message, data=None):
 
-    return CustomError(error_code=get_custom_error_code(error=error), message=message)
+    return CustomError(error_code=get_custom_error_code(error=error),
+                       message=message,
+                       data=data)

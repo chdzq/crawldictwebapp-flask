@@ -15,9 +15,9 @@ class ARPAbetCMUService:
         return WordModel.decode_default(find_alphabet) if find_alphabet else None
 
     def update(self, model):
-        if model:
-            return self._mongo.update(table_name=self._table,
-                                      condition={'word': model.word},
-                                      update_data=WordModel.encode_default(model),
-                                      upsert=True)
-        return None
+        if not model:
+            return None
+        return self._mongo.update(table_name=self._table,
+                                  condition={'word': model.word},
+                                  update_data=WordModel.encode_default(model),
+                                  upsert=True)

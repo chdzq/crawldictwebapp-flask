@@ -4,7 +4,6 @@ import subprocess
 from webapp import mongo_service, redis_service
 from flask import jsonify, request, json
 from arpabetandipaconvertor.ipa2arpabet import IPA2ARPAbetConvertor
-from core.redis import get_crawl_redis_key, get_rapabet_redis_key
 from webapp.exception.generate_worker import generate_custom_error
 from webapp.exception.webapp_error import ARPAbetError, SystemError
 from core.model.word_model import WordModel
@@ -17,6 +16,7 @@ crawl_blueprint = Blueprint('crawl', __name__)
 
 @crawl_blueprint.route('/crawl', methods=['POST'])
 def crawl_world():
+
     """
      1.爬虫爬到字
      2.存在redis中
@@ -34,24 +34,27 @@ def crawl_world():
         raise generate_custom_error(SystemError.request_param, "参数异常")
 
     spider_names = ["haici", "iciba", "haiciname"]
-    spider_param = json.dumps(body_words)
 
     will_crawl_words_dict, alphabets_dict = _work_before_crawl(words=body_words)
 
     for spider_name in spider_names:
         if not will_crawl_words_dict:
             break
+        spider_param = json.dumps([obj for obj in will_crawl_words_dict.keys()])
         try:
             subprocess.check_output(['scrapy', 'crawl', spider_name, "-a", "words=" + spider_param])
-        except Exception as e:
+        except BaseException as e:
             logger.error(msg="错误信息 %s" % str(e))
 
-        _work_after_crawl(will_crawl_words_dict=will_crawl_words_dict, alphabets_dict=alphabets_dict)
+        _work_after_crawl(will_crawl_words_dict=will_crawl_words_dict,
+                          alphabets_dict=alphabets_dict)
 
     if not will_crawl_words_dict:
         return jsonify(alphabets_dict)
 
-    raise generate_custom_error(ARPAbetError.unable_crawl_ipa, "只查到了 %s" % json.dumps(alphabets_dict))
+    raise generate_custom_error(error=ARPAbetError.unable_crawl_ipa,
+                                message="只查到了部分数据,详细在body里面",
+                                data=alphabets_dict)
 
 
 def _work_before_crawl(words):
@@ -60,6 +63,7 @@ def _work_before_crawl(words):
     will_crawl_words_dict = {}
     for word in words:
         alphabet = redis_service.get_convert_arpabet(word=word)
+        print("%s : %s" % (word, alphabet))
         if alphabet:
             alphabets_dict[word] = alphabet
             continue

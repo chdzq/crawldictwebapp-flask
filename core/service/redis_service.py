@@ -2,11 +2,13 @@
 from core.model.word_model import WordModel
 from core.redis import Redis
 
+
 def get_crawl_redis_key(word):
     return 'crawl_' + word
 
 def get_rapabet_redis_key(word):
     return 'arpabet_' + word
+
 
 class RedisService:
     def __init__(self, config):
@@ -24,7 +26,6 @@ class RedisService:
         key = get_rapabet_redis_key(word=model.word)
         return self._redis.set_data(key=key,
                                     data=model.get_default_arpabet())
-
 
     # 爬回来的音标
     def get_crawl_alphabet(self, word):
@@ -46,4 +47,3 @@ class RedisService:
             return None
         key = get_crawl_redis_key(word=word)
         return self._redis.delete(key=key)
-

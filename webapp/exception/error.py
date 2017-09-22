@@ -2,12 +2,19 @@
 
 class CustomError(Exception):
 
-    def __init__(self, error_code, message):
+    def __init__(self, error_code, message, data=None):
         self._error_code = error_code
         self._message = message
+        self._data = data
 
-    def get_error_code(self):
+    @property
+    def error_code(self):
         return self._error_code
 
-    def get_message(self):
+    @property
+    def message(self):
         return self._message if self._message else ""
+
+    @property
+    def data(self):
+        return self._data

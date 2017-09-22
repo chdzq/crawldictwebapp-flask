@@ -13,9 +13,11 @@
 class WordModel:
 
     class Arpabets:
+
         def __init__(self, default, random=None):
             self._default = default
             self._random = random
+
         @property
         def default(self):
             return self._default
@@ -77,7 +79,6 @@ class WordModel:
         if self._arpabets:
             return self._arpabets.default
         return None
-
 
     # default method for decode
     @staticmethod
