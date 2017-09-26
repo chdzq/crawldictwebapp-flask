@@ -5,6 +5,7 @@ import json
 from datetime import date, datetime
 from logging import getLogger
 from enum import Enum, unique
+import urllib
 
 logger = getLogger(__name__)
 
@@ -23,7 +24,7 @@ class Mongodb(object):
         username = db_config.get('username', None)
         if username:
             password = db_config.get('password', None)
-            uri += '%s:%s@' % (username, password)
+            uri += '%s:%s@' % (urllib.parse.quote_plus(username), urllib.parse.quote_plus(password))
         uri += self._db_config.get('host', None)
         self._conn = MongoClient(host=uri, port=self._db_config.get('port', None))
         # 获取数据库对象(选择/切换)

@@ -3,7 +3,7 @@
 import subprocess
 from webapp import mongo_service, redis_service
 from flask import jsonify, request, json
-from arpabetandipaconvertor.ipa2arpabet import IPA2ARPAbetConvertor
+from arpabetandipaconvertor.phoneticarphabet2arpabet import PhoneticAlphabet2ARPAbetConvertor
 from webapp.exception.generate_worker import generate_custom_error
 from webapp.exception.webapp_error import ARPAbetError, SystemError
 from core.model.word_model import WordModel
@@ -13,6 +13,7 @@ logger = getLogger(__name__)
 from flask.blueprints import Blueprint
 
 crawl_blueprint = Blueprint('crawl', __name__)
+
 
 @crawl_blueprint.route('/crawl', methods=['POST'])
 def crawl_world():
@@ -63,15 +64,15 @@ def _work_before_crawl(words):
     will_crawl_words_dict = {}
     for word in words:
         alphabet = redis_service.get_convert_arpabet(word=word)
-        print("%s : %s" % (word, alphabet))
         if alphabet:
             alphabets_dict[word] = alphabet
             continue
-        find_alphabet = mongo_service.find_one(word)
-        if find_alphabet:
-            temp_alphabet = find_alphabet.get_default_arpabet()
-            if temp_alphabet:
-                alphabets_dict[word] = temp_alphabet
+        find_arpabet = mongo_service.find_one(word=word.upper())
+        if find_arpabet:
+            temp_arpabet = find_arpabet.get_default_arpabet()
+            if temp_arpabet:
+                alphabets_dict[word] = temp_arpabet
+                redis_service.save_convert_arpabet(find_arpabet)
                 continue
         will_crawl_words_dict[word] = True
 
@@ -86,7 +87,7 @@ def _work_after_crawl(will_crawl_words_dict, alphabets_dict):
         if alphabet:
             word_model = WordModel(word=word)
             try:
-                convert = IPA2ARPAbetConvertor()
+                convert = PhoneticAlphabet2ARPAbetConvertor()
                 arpabet = convert.convert(alphabet)
                 arpabets = WordModel.Arpabets(default=arpabet)
                 word_model.arpabets = arpabets

@@ -6,7 +6,7 @@ import os
 from importlib import import_module
 
 
-MODE = os.environ.get('MODE') or 'develop'
+MODE = os.environ.get('MODE') or 'product'
 
 try:
     current_config = import_module('config.' + MODE)

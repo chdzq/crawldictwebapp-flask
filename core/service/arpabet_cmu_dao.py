@@ -1,7 +1,6 @@
 # encoding: utf-8
 from core.model.word_model import WordModel
 from core.mongo import Mongodb
-from flask import json
 
 
 class ARPAbetCMUService:

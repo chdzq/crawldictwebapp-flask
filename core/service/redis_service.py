@@ -23,6 +23,7 @@ class RedisService:
     def save_convert_arpabet(self, model):
         if not model:
             return None
+
         key = get_rapabet_redis_key(word=model.word)
         return self._redis.set_data(key=key,
                                     data=model.get_default_arpabet())
