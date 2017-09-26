@@ -1,0 +1,2 @@
+include *.sh config.ini wsgi.py requirements.txt
+
