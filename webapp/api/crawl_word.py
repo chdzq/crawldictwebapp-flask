@@ -4,12 +4,11 @@ import subprocess
 from webapp import mongo_service, redis_service
 from flask import jsonify, request, json
 from arpabetandipaconvertor.phoneticarphabet2arpabet import PhoneticAlphabet2ARPAbetConvertor
+from arpabetandipaconvertor.excepts import PhonemeError
 from webapp.exception.generate_worker import generate_custom_error
 from webapp.exception.webapp_error import ARPAbetError, SystemError
 from core.model.word_model import WordModel
-from logging import getLogger
-logger = getLogger(__name__)
-
+from webapp.log.logger import logger
 from flask.blueprints import Blueprint
 
 crawl_blueprint = Blueprint('crawl', __name__)
@@ -26,6 +25,7 @@ def crawl_world():
      5.最后存在mongodb
      6.返回数据
     """
+    logger.info("收到请求 %s" % str(request))
     body = request.get_json()
     if not body:
         raise generate_custom_error(SystemError.request_param, "body是空")
@@ -45,7 +45,7 @@ def crawl_world():
         try:
             subprocess.check_output(['scrapy', 'crawl', spider_name, "-a", "words=" + spider_param])
         except BaseException as e:
-            logger.error(msg="错误信息 %s" % str(e))
+            logger.error(msg="%s 在爬取 %s 时候，执行出错 %s" % (spider_name, spider_param, str(e)))
 
         _work_after_crawl(will_crawl_words_dict=will_crawl_words_dict,
                           alphabets_dict=alphabets_dict)
@@ -91,6 +91,8 @@ def _work_after_crawl(will_crawl_words_dict, alphabets_dict):
                 arpabet = convert.convert(alphabet)
                 arpabets = WordModel.Arpabets(default=arpabet)
                 word_model.arpabets = arpabets
+            except PhonemeError as e:
+                logger.error(msg="ipa转换arpabet出错: %s" % e.message)
             except BaseException as e:
                 logger.error(msg="ipa转换arpabet出错: %s" % str(e))
                 continue

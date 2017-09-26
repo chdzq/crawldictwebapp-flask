@@ -1,12 +1,11 @@
 from pymongo.errors import PyMongoError
 from webapp import app
-from logging import getLogger
 from flask import make_response, jsonify
 from webapp.exception.generate_worker import get_custom_error_code
 from webapp.exception.webapp_error import SystemError
 from webapp.model.request_result import RequestResult
+from webapp.log.logger import logger
 
-logger = getLogger(__name__)
 
 @app.errorhandler(PyMongoError)
 def handle_mongo_exception(error):

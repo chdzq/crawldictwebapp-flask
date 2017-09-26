@@ -14,3 +14,7 @@ redis = {
     'db': 0,
     'password': ''
 }
+
+spider_log = '/Users/ios/Desktop/work/huiju/logs/spider.log'
+
+flask_log = '/Users/ios/Desktop/work/huiju/logs/flask.log'

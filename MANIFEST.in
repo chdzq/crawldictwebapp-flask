@@ -1,2 +1,2 @@
-include *.sh config.ini wsgi.py requirements.txt
+include *.sh config.ini wsgi.py requirements.txt scrapy.cfg
 

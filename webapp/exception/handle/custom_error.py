@@ -8,8 +8,7 @@ from webapp.exception.generate_worker import get_custom_error_code
 from webapp.exception.webapp_error import OtherError
 from webapp.model.request_result import RequestResult
 
-from logging import getLogger
-logger = getLogger(__name__)
+from webapp.log.logger import logger
 
 @app.errorhandler(CustomError)
 def handle_custom_exception(error):
