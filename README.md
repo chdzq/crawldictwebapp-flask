@@ -1,11 +1,18 @@
 # 部署
-1. 环境： python3
 
-	 `virtualenv .env --python=python3`
-2. 安装相关包
+## 环境： 
 
-	 `pip install -r requirements.txt`
-3. 配置ngix
+python3
+
+`virtualenv .env --python=python3`
+	 
+## 安装
+
+`pip install -r requirements.txt`
+	  
+## 配置
+
+1. 配置ngix
    
 	```
 	server {
@@ -19,12 +26,25 @@
 		}
 	}
 	```
-
-4. 启动
-
-  	`uwsgi --ini config.ini `
-5. 启动nginx
+	
+2. 启动nginx
 
 	`/usr/nginx/sbin/nginx -s reload `
 
-6. 其他相关：redis和mongodb
+3. 其他相关：redis和mongodb
+
+## 启动服务
+    
+1. 正式环境 
+  
+    `source start_server.sh`
+  	
+2. 测试环境
+  	
+  	`source start_server.sh develop`
+  	
+3. 停止服务
+  	
+  	`sh stop_server.sh`
+  	
+
