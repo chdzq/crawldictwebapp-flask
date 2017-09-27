@@ -9,7 +9,10 @@ then
 
     kill ${uwsgi_pid}
 
-    echo "等待提示：[*]  + *** done       nohup uwsgi --ini config.ini"
+    echo "服务器停止"
+    echo "启动product环境，执行：source start_server.sh "
+    echo "                 或是：source start_server.sh product"
+    echo "启动develop环境，执行：source start_server.sh develop"
 
 else
 

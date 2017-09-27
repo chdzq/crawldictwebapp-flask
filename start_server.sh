@@ -10,9 +10,9 @@ fi
 if [[ 'product' != ${mode} && 'develop' != ${mode} ]]
 then
 
-     echo "启动develop环境，执行：source start_server.sh develop"
      echo "启动product环境，执行：source start_server.sh "
      echo "                 或是：source start_server.sh product"
+     echo "启动develop环境，执行：source start_server.sh develop"
      return
 
 fi
