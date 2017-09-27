@@ -1,2 +1,3 @@
 include *.sh config.ini wsgi.py requirements.txt scrapy.cfg
 
+prune test

@@ -102,3 +102,6 @@ venv.bak/
 .mypy_cache/
 
 .idea
+
+# 过滤掉
+*.out
